@@ -5,10 +5,9 @@
     <parent>
         <groupId>org.atomhopper</groupId>
         <artifactId>parent</artifactId>
-        <version>1.1.2-SNAPSHOT</version>
+        <version>1.1.2.zinio-SNAPSHOT</version>
     </parent>
-
-    <groupId>org.atomhopper</groupId>
+    
     <artifactId>test-util</artifactId>
     <packaging>jar</packaging>
 

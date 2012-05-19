@@ -1,12 +1,14 @@
 package org.atomhopper.hibernate.adapter;
 
+import static org.apache.abdera.i18n.text.UrlEncoding.decode;
+import static org.apache.abdera.i18n.text.UrlEncoding.encode;
+
 import java.io.StringReader;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
 import org.apache.abdera.Abdera;
-import static org.apache.abdera.i18n.text.UrlEncoding.decode;
-import static org.apache.abdera.i18n.text.UrlEncoding.encode;
 import org.apache.abdera.model.Document;
 import org.apache.abdera.model.Entry;
 import org.apache.abdera.model.Feed;
@@ -25,12 +27,24 @@ import org.atomhopper.hibernate.query.SimpleCategoryCriteriaGenerator;
 import org.atomhopper.response.AdapterResponse;
 import org.atomhopper.util.uri.template.EnumKeyedTemplateParameters;
 import org.atomhopper.util.uri.template.URITemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 
 public class HibernateFeedSource implements FeedSource {
 
     private static final int PAGE_SIZE = 25;
     private FeedRepository feedRepository;
     private static final String LAST_ENTRY = "last";
+
+    private static final String TITLE_PROP = "title";
+    private static final String AUTHOR_NAME_PROP = "title";
+    private static final String AUTHOR_URI_PROP = "title";
+    private static final String CATEGORY_PROP = "title";
+    private static final String GENERATOR_PROP = "title";
+    private static final String LOGO_PROP = "title";
+    private static final String ICON_PROP = "title";
+
+    @Autowired
+    Map<String, String> znoProps;
 
     public void setFeedRepository(FeedRepository feedRepository) {
         this.feedRepository = feedRepository;
@@ -45,43 +59,43 @@ public class HibernateFeedSource implements FeedSource {
     public void setParameters(Map<String, String> params) {
     }
 
-    private Feed hydrateFeed(Abdera abdera, List<PersistedEntry> persistedEntries, GetFeedRequest getFeedRequest, final int pageSize) {
+    private Feed hydrateFeed(Abdera abdera, List<PersistedEntry> persistedEntries, GetFeedRequest getFeedRequest,
+            final int pageSize) {
         final Feed hyrdatedFeed = abdera.newFeed();
 
         if (!(persistedEntries.isEmpty())) {
-            final String BASE_FEED_URI = decode(getFeedRequest.urlFor(new EnumKeyedTemplateParameters<URITemplate>(URITemplate.FEED)));
+            final String BASE_FEED_URI = decode(getFeedRequest.urlFor(new EnumKeyedTemplateParameters<URITemplate>(
+                    URITemplate.FEED)));
             final String searchString = getFeedRequest.getSearchQuery() != null ? getFeedRequest.getSearchQuery() : "";
 
             hyrdatedFeed.setId(UUID.randomUUID().toString());
             hyrdatedFeed.setTitle(getFeedRequest.getFeedName().toString());
 
+            // Zinio Beta
+            addZinioProperties(hyrdatedFeed);
+
             // Set the previous link
-            hyrdatedFeed.addLink(new StringBuilder()
-                    .append(BASE_FEED_URI).append("?marker=")
-                    .append(persistedEntries.get(0).getEntryId())
-                    .append("&limit=")
-                    .append(String.valueOf(pageSize))
-                    .append("&search=")
-                    .append(encode(searchString).toString())
-                    .append("&direction=forward").toString()).setRel(Link.REL_PREVIOUS);
+            hyrdatedFeed.addLink(
+                    new StringBuilder().append(BASE_FEED_URI).append("?marker=")
+                            .append(persistedEntries.get(0).getEntryId()).append("&limit=")
+                            .append(String.valueOf(pageSize)).append("&search=")
+                            .append(encode(searchString).toString()).append("&direction=forward").toString()).setRel(
+                    Link.REL_PREVIOUS);
 
-
-            final PersistedEntry nextPersistedEntry = feedRepository.getNextMarker(persistedEntries.get(persistedEntries.size() - 1),
-                    getFeedRequest.getFeedName().toString(), new SimpleCategoryCriteriaGenerator(searchString));
+            final PersistedEntry nextPersistedEntry = feedRepository.getNextMarker(
+                    persistedEntries.get(persistedEntries.size() - 1), getFeedRequest.getFeedName().toString(),
+                    new SimpleCategoryCriteriaGenerator(searchString));
 
             // If limit > actual number of entries in the database, there
             // is not a next link
             if (nextPersistedEntry != null) {
                 // Set the next link
-                hyrdatedFeed.addLink(new StringBuilder()
-                        .append(BASE_FEED_URI)
-                        .append("?marker=")
-                        .append(nextPersistedEntry.getEntryId())
-                        .append("&limit=")
-                        .append(String.valueOf(pageSize))
-                        .append("&search=")
-                        .append(encode(searchString).toString())
-                        .append("&direction=backward").toString()).setRel(Link.REL_NEXT);
+                hyrdatedFeed.addLink(
+                        new StringBuilder().append(BASE_FEED_URI).append("?marker=")
+                                .append(nextPersistedEntry.getEntryId()).append("&limit=")
+                                .append(String.valueOf(pageSize)).append("&search=")
+                                .append(encode(searchString).toString()).append("&direction=backward").toString())
+                        .setRel(Link.REL_NEXT);
             }
         }
 
@@ -92,8 +106,46 @@ public class HibernateFeedSource implements FeedSource {
         return hyrdatedFeed;
     }
 
+    private void addZinioProperties(Feed hyrdatedFeed) {
+        if (znoProps == null) {
+            return;
+        }
+
+        if (znoProps.containsKey(TITLE_PROP)) {
+            hyrdatedFeed.setTitle(znoProps.get(TITLE_PROP));
+        }
+
+        if (znoProps.containsKey(AUTHOR_NAME_PROP)) {
+            String authorName = znoProps.get(AUTHOR_NAME_PROP);
+            String authorUri = null;
+
+            if (znoProps.containsKey(AUTHOR_URI_PROP)) {
+                authorUri = znoProps.get(AUTHOR_URI_PROP);
+            }
+
+            hyrdatedFeed.addAuthor(authorName, null, authorUri);
+        }
+
+        if (znoProps.containsKey(CATEGORY_PROP)) {
+            hyrdatedFeed.addCategory(znoProps.get(CATEGORY_PROP));
+        }
+
+        if (znoProps.containsKey(GENERATOR_PROP)) {
+            hyrdatedFeed.setGenerator(null, znoProps.get(GENERATOR_PROP), null);
+        }
+
+        if (znoProps.containsKey(ICON_PROP)) {
+            hyrdatedFeed.setIcon(znoProps.get(ICON_PROP));
+        }
+
+        if (znoProps.containsKey(LOGO_PROP)) {
+            hyrdatedFeed.setLogo(znoProps.get(LOGO_PROP));
+        }
+    }
+
     private Entry hydrateEntry(PersistedEntry persistedEntry, Abdera abderaReference) {
-        final Document<Entry> hydratedEntryDocument = abderaReference.getParser().parse(new StringReader(persistedEntry.getEntryBody()));
+        final Document<Entry> hydratedEntryDocument = abderaReference.getParser().parse(
+                new StringReader(persistedEntry.getEntryBody()));
         Entry entry = null;
 
         if (hydratedEntryDocument != null) {
@@ -107,7 +159,8 @@ public class HibernateFeedSource implements FeedSource {
 
     @Override
     public AdapterResponse<Entry> getEntry(GetEntryRequest getEntryRequest) {
-        final PersistedEntry entry = feedRepository.getEntry(getEntryRequest.getEntryId(), getEntryRequest.getFeedName());
+        final PersistedEntry entry = feedRepository.getEntry(getEntryRequest.getEntryId(),
+                getEntryRequest.getFeedName());
         AdapterResponse<Entry> response = ResponseBuilder.notFound();
 
         if (entry != null) {
@@ -146,31 +199,31 @@ public class HibernateFeedSource implements FeedSource {
 
         if (persistedFeed != null) {
             final String searchString = getFeedRequest.getSearchQuery() != null ? getFeedRequest.getSearchQuery() : "";
-            final List<PersistedEntry> persistedEntries = feedRepository.getFeedHead(feedName, new SimpleCategoryCriteriaGenerator(searchString), pageSize);
+            final List<PersistedEntry> persistedEntries = feedRepository.getFeedHead(feedName,
+                    new SimpleCategoryCriteriaGenerator(searchString), pageSize);
 
             Feed hyrdatedFeed = hydrateFeed(abdera, persistedEntries, getFeedRequest, pageSize);
             // Set the last link in the feed head
-            final String BASE_FEED_URI = decode(getFeedRequest.urlFor(new EnumKeyedTemplateParameters<URITemplate>(URITemplate.FEED)));
+            final String BASE_FEED_URI = decode(getFeedRequest.urlFor(new EnumKeyedTemplateParameters<URITemplate>(
+                    URITemplate.FEED)));
 
-            final int totalFeedEntryCount = feedRepository.getFeedCount(feedName, new SimpleCategoryCriteriaGenerator(searchString));
+            final int totalFeedEntryCount = feedRepository.getFeedCount(feedName, new SimpleCategoryCriteriaGenerator(
+                    searchString));
             int lastPageSize = totalFeedEntryCount % pageSize;
 
             if (lastPageSize == 0) {
                 lastPageSize = pageSize;
             }
 
-            final List<PersistedEntry> lastPersistedEntries = feedRepository.getLastPage(feedName, lastPageSize, new SimpleCategoryCriteriaGenerator(searchString));
+            final List<PersistedEntry> lastPersistedEntries = feedRepository.getLastPage(feedName, lastPageSize,
+                    new SimpleCategoryCriteriaGenerator(searchString));
 
             if (lastPersistedEntries != null && !(lastPersistedEntries.isEmpty())) {
-                hyrdatedFeed.addLink(new StringBuilder()
-                        .append(BASE_FEED_URI)
-                        .append("?marker=")
-                        .append(lastPersistedEntries.get(lastPersistedEntries.size() - 1).getEntryId())
-                        .append("&limit=")
-                        .append(String.valueOf(pageSize))
-                        .append("&search=")
-                        .append(encode(searchString).toString())
-                        .append("&direction=backward").toString())
+                hyrdatedFeed.addLink(
+                        new StringBuilder().append(BASE_FEED_URI).append("?marker=")
+                                .append(lastPersistedEntries.get(lastPersistedEntries.size() - 1).getEntryId())
+                                .append("&limit=").append(String.valueOf(pageSize)).append("&search=")
+                                .append(encode(searchString).toString()).append("&direction=backward").toString())
                         .setRel(Link.REL_LAST);
             }
 
@@ -188,7 +241,8 @@ public class HibernateFeedSource implements FeedSource {
             final String pageDirectionValue = getFeedRequest.getDirection();
             pageDirection = PageDirection.valueOf(pageDirectionValue.toUpperCase());
         } catch (Exception iae) {
-            return ResponseBuilder.badRequest("Marker must have a page direction specified as either \"forward\" or \"backward\"");
+            return ResponseBuilder
+                    .badRequest("Marker must have a page direction specified as either \"forward\" or \"backward\"");
         }
 
         final PersistedFeed persistedFeed = feedRepository.getFeed(getFeedRequest.getFeedName());
@@ -196,9 +250,9 @@ public class HibernateFeedSource implements FeedSource {
 
         if (markerEntry != null) {
             final String searchString = getFeedRequest.getSearchQuery() != null ? getFeedRequest.getSearchQuery() : "";
-            final Feed feed = hydrateFeed(getFeedRequest.getAbdera(),
-                    feedRepository.getFeedPage(getFeedRequest.getFeedName(), markerEntry, pageDirection,
-                    new SimpleCategoryCriteriaGenerator(searchString), pageSize), getFeedRequest, pageSize);
+            final Feed feed = hydrateFeed(getFeedRequest.getAbdera(), feedRepository.getFeedPage(getFeedRequest
+                    .getFeedName(), markerEntry, pageDirection, new SimpleCategoryCriteriaGenerator(searchString),
+                    pageSize), getFeedRequest, pageSize);
 
             response = ResponseBuilder.found(feed);
         } else {
