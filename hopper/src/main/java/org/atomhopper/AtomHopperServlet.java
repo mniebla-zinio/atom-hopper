@@ -1,7 +1,16 @@
 package org.atomhopper;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.ServletException;
+
 import org.apache.abdera.Abdera;
 import org.apache.abdera.ext.json.JSONFilter;
+import org.apache.abdera.parser.Parser;
+import org.apache.abdera.parser.ParserOptions;
 import org.apache.abdera.protocol.server.Provider;
 import org.apache.abdera.protocol.server.servlet.AbderaServlet;
 import org.apache.commons.lang.StringUtils;
@@ -25,19 +34,11 @@ import org.atomhopper.util.config.resource.uri.URIConfigurationResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.ServletException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.Map;
-
 /**
- * This class is the entry point for the atom server application. This servlet is
- * responsible for setting up any required services as well as performing the
- * parsing of the atom server configuration. In addition, the servlet is also
- * responsible for context clean-up using the destroy method. This method should
- * make sure that any resources that have independent thread life-cycles are correctly
- * disposed of.
+ * This class is the entry point for the atom server application. This servlet is responsible for setting up any
+ * required services as well as performing the parsing of the atom server configuration. In addition, the servlet is
+ * also responsible for context clean-up using the destroy method. This method should make sure that any resources that
+ * have independent thread life-cycles are correctly disposed of.
  */
 public final class AtomHopperServlet extends AbderaServlet {
 
@@ -52,12 +53,17 @@ public final class AtomHopperServlet extends AbderaServlet {
 
     public AtomHopperServlet() {
         //TODO: One day I'm going to integrate Power API's configuration framework into this but until this, this'll do
-        configurationParser = new JAXBConfigurationParser<Configuration>(Configuration.class, org.atomhopper.config.v1_0.ObjectFactory.class);
+        configurationParser = new JAXBConfigurationParser<Configuration>(Configuration.class,
+                org.atomhopper.config.v1_0.ObjectFactory.class);
     }
 
     @Override
     public void init() throws ServletException {
         abderaReference = getAbdera();
+        Parser defaultParser = abderaReference.getParser();
+        ParserOptions parserOptions = defaultParser.getDefaultParserOptions();
+        parserOptions.setCharset("utf-8");
+        defaultParser.setDefaultParserOptions(parserOptions);
 
         final String configLocation = getConfigurationLocation();
         LOG.info("Reading configuration: " + configLocation);
@@ -114,9 +120,9 @@ public final class AtomHopperServlet extends AbderaServlet {
     @Override
     protected Provider createProvider() {
         final WorkspaceProvider workspaceProvider = new WorkspaceProvider(getHostConfiguration());
-        final String atomhopperUrlPattern = (getServletConfig().getInitParameter("atomhopper-url-pattern") == null) ?
-                "/" : getServletConfig().getInitParameter("atomhopper-url-pattern"); 
-        
+        final String atomhopperUrlPattern = (getServletConfig().getInitParameter("atomhopper-url-pattern") == null) ? "/"
+                : getServletConfig().getInitParameter("atomhopper-url-pattern");
+
         workspaceProvider.init(abderaReference, parseDefaults(configuration.getDefaults()));
 
         final AtomHopperConfigurationPreprocessor preprocessor = new AtomHopperConfigurationPreprocessor(configuration);
@@ -126,9 +132,8 @@ public final class AtomHopperServlet extends AbderaServlet {
         workspaceProvider.init(abderaReference, parseDefaults(configurationDefaults));
 
         for (WorkspaceConfiguration workspaceCfg : configuration.getWorkspace()) {
-            final WorkspaceConfigProcessor cfgProcessor = new WorkspaceConfigProcessor(
-                    workspaceCfg, applicationContextAdapter,
-                    workspaceProvider.getTargetResolver(), atomhopperUrlPattern);
+            final WorkspaceConfigProcessor cfgProcessor = new WorkspaceConfigProcessor(workspaceCfg,
+                    applicationContextAdapter, workspaceProvider.getTargetResolver(), atomhopperUrlPattern);
 
             workspaceProvider.getWorkspaceManager().addWorkspaces(cfgProcessor.toHandler());
         }
@@ -143,7 +148,8 @@ public final class AtomHopperServlet extends AbderaServlet {
         final HostConfiguration hostConfiguration = configuration.getHost();
 
         if (StringUtils.isBlank(hostConfiguration.getDomain())) {
-            throw new ConfigurationParserException("No domain specified in the host configuration. This is required for link generation. Halting.");
+            throw new ConfigurationParserException(
+                    "No domain specified in the host configuration. This is required for link generation. Halting.");
         }
 
         return hostConfiguration;
