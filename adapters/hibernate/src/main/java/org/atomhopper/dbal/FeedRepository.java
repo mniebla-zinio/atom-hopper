@@ -1,13 +1,13 @@
 package org.atomhopper.dbal;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+
 import org.atomhopper.adapter.jpa.PersistedCategory;
 import org.atomhopper.adapter.jpa.PersistedEntry;
 import org.atomhopper.adapter.jpa.PersistedFeed;
 import org.atomhopper.hibernate.query.CategoryCriteriaGenerator;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
 
 public interface FeedRepository {
 
@@ -30,9 +30,13 @@ public interface FeedRepository {
 
     void saveEntry(PersistedEntry entry);
 
+    void updateEntry(PersistedEntry entry);
+
     Set<PersistedCategory> updateCategories(Set<PersistedCategory> categories);
 
-    PersistedEntry getNextMarker(PersistedEntry persistedEntry, String feedName, CategoryCriteriaGenerator criteriaGenerator);
+    PersistedEntry getNextMarker(PersistedEntry persistedEntry, String feedName,
+            CategoryCriteriaGenerator criteriaGenerator);
 
     int getFeedCount(String feedName, CategoryCriteriaGenerator criteriaGenerator);
+
 }

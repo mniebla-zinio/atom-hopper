@@ -1,6 +1,13 @@
 package org.atomhopper.hibernate;
 
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.atomhopper.adapter.jpa.PersistedCategory;
 import org.atomhopper.adapter.jpa.PersistedEntry;
 import org.atomhopper.adapter.jpa.PersistedFeed;
@@ -14,19 +21,10 @@ import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import org.atomhopper.hibernate.query.SimpleCategoryCriteriaGenerator;
-import org.hibernate.criterion.Projections;
 
 public class HibernateFeedRepository implements FeedRepository {
 
@@ -100,7 +98,8 @@ public class HibernateFeedRepository implements FeedRepository {
 
             @Override
             public Set<PersistedCategory> perform(Session liveSession) {
-                final PersistedFeed persistedFeed = (PersistedFeed) liveSession.createCriteria(PersistedFeed.class).add(Restrictions.idEq(feedName)).uniqueResult();
+                final PersistedFeed persistedFeed = (PersistedFeed) liveSession.createCriteria(PersistedFeed.class)
+                        .add(Restrictions.idEq(feedName)).uniqueResult();
                 final Set<PersistedCategory> categories = new HashSet<PersistedCategory>();
 
                 if (persistedFeed != null) {
@@ -115,14 +114,16 @@ public class HibernateFeedRepository implements FeedRepository {
     }
 
     @Override
-    public List<PersistedEntry> getFeedHead(final String feedName, final CategoryCriteriaGenerator criteriaGenerator, final int pageSize) {
+    public List<PersistedEntry> getFeedHead(final String feedName, final CategoryCriteriaGenerator criteriaGenerator,
+            final int pageSize) {
         return performComplexAction(new ComplexSessionAction<List<PersistedEntry>>() {
 
             @Override
             public List<PersistedEntry> perform(Session liveSession) {
                 final List<PersistedEntry> feedHead = new LinkedList<PersistedEntry>();
 
-                final Criteria criteria = liveSession.createCriteria(PersistedEntry.class).add(Restrictions.eq(FEED_NAME, feedName));
+                final Criteria criteria = liveSession.createCriteria(PersistedEntry.class).add(
+                        Restrictions.eq(FEED_NAME, feedName));
                 criteriaGenerator.enhanceCriteria(criteria);
 
                 criteria.setMaxResults(pageSize).addOrder(Order.desc(DATE_LAST_UPDATED));
@@ -135,29 +136,32 @@ public class HibernateFeedRepository implements FeedRepository {
     }
 
     @Override
-    public List<PersistedEntry> getFeedPage(final String feedName, final PersistedEntry markerEntry, final PageDirection direction,
-    final CategoryCriteriaGenerator criteriaGenerator, final int pageSize) {
+    public List<PersistedEntry> getFeedPage(final String feedName, final PersistedEntry markerEntry,
+            final PageDirection direction, final CategoryCriteriaGenerator criteriaGenerator, final int pageSize) {
         return performComplexAction(new ComplexSessionAction<List<PersistedEntry>>() {
 
             @Override
             public List<PersistedEntry> perform(Session liveSession) {
                 final LinkedList<PersistedEntry> feedPage = new LinkedList<PersistedEntry>();
 
-                final Criteria criteria = liveSession.createCriteria(PersistedEntry.class).add(Restrictions.eq(FEED_NAME, feedName));
+                final Criteria criteria = liveSession.createCriteria(PersistedEntry.class).add(
+                        Restrictions.eq(FEED_NAME, feedName));
                 criteriaGenerator.enhanceCriteria(criteria);
                 criteria.setMaxResults(pageSize);
 
                 switch (direction) {
-                    case FORWARD:
-                        criteria.add(Restrictions.gt(DATE_LAST_UPDATED, markerEntry.getCreationDate())).addOrder(Order.asc(DATE_LAST_UPDATED));
-                        feedPage.addAll(criteria.list());
-                        Collections.reverse(feedPage);
-                        break;
+                case FORWARD:
+                    criteria.add(Restrictions.gt(DATE_LAST_UPDATED, markerEntry.getCreationDate())).addOrder(
+                            Order.asc(DATE_LAST_UPDATED));
+                    feedPage.addAll(criteria.list());
+                    Collections.reverse(feedPage);
+                    break;
 
-                    case BACKWARD:
-                        criteria.add(Restrictions.le(DATE_LAST_UPDATED, markerEntry.getCreationDate())).addOrder(Order.desc(DATE_LAST_UPDATED));
-                        feedPage.addAll(criteria.list());
-                        break;
+                case BACKWARD:
+                    criteria.add(Restrictions.le(DATE_LAST_UPDATED, markerEntry.getCreationDate())).addOrder(
+                            Order.desc(DATE_LAST_UPDATED));
+                    feedPage.addAll(criteria.list());
+                    break;
                 }
 
                 return feedPage;
@@ -185,8 +189,9 @@ public class HibernateFeedRepository implements FeedRepository {
                 final Set<PersistedCategory> updatedCategories = new HashSet<PersistedCategory>();
 
                 for (PersistedCategory entryCategory : categories) {
-                    PersistedCategory liveCategory = (PersistedCategory) liveSession.createCriteria(PersistedCategory.class)
-                            .add(Restrictions.idEq(entryCategory.getTerm())).uniqueResult();
+                    PersistedCategory liveCategory = (PersistedCategory) liveSession
+                            .createCriteria(PersistedCategory.class).add(Restrictions.idEq(entryCategory.getTerm()))
+                            .uniqueResult();
 
                     if (liveCategory == null) {
                         liveCategory = new PersistedCategory(entryCategory.getTerm());
@@ -207,7 +212,8 @@ public class HibernateFeedRepository implements FeedRepository {
 
             @Override
             public void perform(Session liveSession) {
-                PersistedFeed feed = (PersistedFeed) liveSession.createCriteria(PersistedFeed.class).add(Restrictions.idEq(entry.getFeed().getName())).uniqueResult();
+                PersistedFeed feed = (PersistedFeed) liveSession.createCriteria(PersistedFeed.class)
+                        .add(Restrictions.idEq(entry.getFeed().getName())).uniqueResult();
 
                 if (feed == null) {
                     feed = entry.getFeed();
@@ -215,6 +221,17 @@ public class HibernateFeedRepository implements FeedRepository {
 
                 liveSession.saveOrUpdate(feed);
                 liveSession.save(entry);
+            }
+        });
+    }
+
+    @Override
+    public void updateEntry(final PersistedEntry entry) {
+        performSimpleAction(new SimpleSessionAction() {
+
+            @Override
+            public void perform(Session liveSession) {
+                liveSession.update(entry);
             }
         });
     }
@@ -248,20 +265,20 @@ public class HibernateFeedRepository implements FeedRepository {
 
             @Override
             public PersistedFeed perform(Session liveSession) {
-                return (PersistedFeed) liveSession.createCriteria(PersistedFeed.class).add(Restrictions.idEq(name)).uniqueResult();
+                return (PersistedFeed) liveSession.createCriteria(PersistedFeed.class).add(Restrictions.idEq(name))
+                        .uniqueResult();
             }
         });
     }
 
     @Override
-    public List<PersistedEntry> getLastPage(final String feedName, final int pageSize, CategoryCriteriaGenerator criteriaGenerator) {
+    public List<PersistedEntry> getLastPage(final String feedName, final int pageSize,
+            CategoryCriteriaGenerator criteriaGenerator) {
 
         final Session session = sessionManager.getSession();
 
-        Criteria criteria = session.createCriteria(PersistedEntry.class)
-                        .add(Restrictions.eq(FEED_NAME, feedName))
-                        .addOrder(Order.asc(DATE_LAST_UPDATED))
-                        .setMaxResults(pageSize);
+        Criteria criteria = session.createCriteria(PersistedEntry.class).add(Restrictions.eq(FEED_NAME, feedName))
+                .addOrder(Order.asc(DATE_LAST_UPDATED)).setMaxResults(pageSize);
 
         criteriaGenerator.enhanceCriteria(criteria);
 
@@ -274,8 +291,7 @@ public class HibernateFeedRepository implements FeedRepository {
 
         Criteria criteria = session.createCriteria(PersistedEntry.class);
 
-        criteria.add(Restrictions.eq(FEED_NAME, feedName))
-                .setProjection(Projections.rowCount()).uniqueResult();
+        criteria.add(Restrictions.eq(FEED_NAME, feedName)).setProjection(Projections.rowCount()).uniqueResult();
 
         criteriaGenerator.enhanceCriteria(criteria);
 
@@ -283,16 +299,16 @@ public class HibernateFeedRepository implements FeedRepository {
     }
 
     @Override
-    public PersistedEntry getNextMarker(final PersistedEntry persistedEntry, final String feedName, CategoryCriteriaGenerator criteriaGenerator) {
+    public PersistedEntry getNextMarker(final PersistedEntry persistedEntry, final String feedName,
+            CategoryCriteriaGenerator criteriaGenerator) {
 
         final Session session = sessionManager.getSession();
 
         Criteria criteria = session.createCriteria(PersistedEntry.class);
 
         criteria.add(Restrictions.eq(FEED_NAME, feedName))
-                        .add(Restrictions.lt(DATE_LAST_UPDATED, persistedEntry.getCreationDate()))
-                        .addOrder(Order.desc(DATE_LAST_UPDATED))
-                        .setMaxResults(1);
+                .add(Restrictions.lt(DATE_LAST_UPDATED, persistedEntry.getCreationDate()))
+                .addOrder(Order.desc(DATE_LAST_UPDATED)).setMaxResults(1);
 
         criteriaGenerator.enhanceCriteria(criteria);
 
@@ -301,8 +317,7 @@ public class HibernateFeedRepository implements FeedRepository {
 
     private int safeLongToInt(long value) {
         if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException
-                (value + " cannot be cast to int without changing its value.");
+            throw new IllegalArgumentException(value + " cannot be cast to int without changing its value.");
         }
         return (int) value;
     }
