@@ -1,5 +1,11 @@
 package org.atomhopper.abdera;
 
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.abdera.Abdera;
 import org.apache.abdera.model.Entry;
 import org.apache.abdera.model.Feed;
@@ -32,12 +38,6 @@ import org.atomhopper.response.AdapterResponse;
 import org.atomhopper.response.EmptyBody;
 import org.springframework.http.HttpStatus;
 
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
 public class FeedAdapter extends TargetAwareAbstractCollectionAdapter {
 
     private static final int ERROR_CODE = 422;
@@ -48,7 +48,8 @@ public class FeedAdapter extends TargetAwareAbstractCollectionAdapter {
     private final FeedPublisher feedPublisher;
     private final FeedSource feedSource;
 
-    public FeedAdapter(String target, FeedConfiguration feedConfiguration, FeedSource feedSource, FeedPublisher feedPublisher) {
+    public FeedAdapter(String target, FeedConfiguration feedConfiguration, FeedSource feedSource,
+            FeedPublisher feedPublisher) {
         super(target);
 
         this.feedConfiguration = feedConfiguration;
@@ -75,7 +76,8 @@ public class FeedAdapter extends TargetAwareAbstractCollectionAdapter {
 
         final String[] allowedMethods = allowedMethodsList.toArray(new String[allowedMethodsList.size()]);
 
-        feedResponseHandler = new FeedResponseHandler(allowedMethods, new FeedPagingProcessor(), new FeedEntityTagProcessor());
+        feedResponseHandler = new FeedResponseHandler(allowedMethods, new FeedPagingProcessor(),
+                new FeedEntityTagProcessor());
         entryResponseHandler = new EntryResponseHandler(allowedMethods);
         emptyBodyResponseHandler = new EmptyBodyResponseHandler(allowedMethods);
     }
@@ -102,18 +104,19 @@ public class FeedAdapter extends TargetAwareAbstractCollectionAdapter {
         final GetCategoriesRequest getCategoriesRequest = new GetCategoriesRequestImpl(request);
 
         try {
-            return ProviderHelper.returnBase(feedSource.getFeedInformation().getCategories(getCategoriesRequest), HttpStatus.OK.value(), Calendar.getInstance().getTime());
+            return ProviderHelper.returnBase(feedSource.getFeedInformation().getCategories(getCategoriesRequest),
+                    HttpStatus.OK.value(), Calendar.getInstance().getTime());
         } catch (Exception ex) {
             return ProviderHelper.servererror(request, ex.getMessage(), ex);
         }
     }
 
-//  TODO: Implement this?
-//
-//    @Override
-//    public CategoriesInfo[] getCategoriesInfo(RequestContext request) {
-//        return super.getCategoriesInfo(request);
-//    }
+    //  TODO: Implement this?
+    //
+    //    @Override
+    //    public CategoriesInfo[] getCategoriesInfo(RequestContext request) {
+    //        return super.getCategoriesInfo(request);
+    //    }
 
     @Override
     public String getId(RequestContext request) {
@@ -135,9 +138,10 @@ public class FeedAdapter extends TargetAwareAbstractCollectionAdapter {
         try {
             final String pageSizeString = getFeedRequest.getPageSize();
 
-            if(StringUtils.isNotBlank(pageSizeString)) {
-                if((Integer.parseInt(pageSizeString) < MIN_LIMIT) || (Integer.parseInt(pageSizeString) > MAX_LIMIT))
+            if (StringUtils.isNotBlank(pageSizeString)) {
+                if ((Integer.parseInt(pageSizeString) < MIN_LIMIT) || (Integer.parseInt(pageSizeString) > MAX_LIMIT)) {
                     return ProviderHelper.badrequest(request, LIMIT_ERROR_MESSAGE);
+                }
             }
         } catch (NumberFormatException nfe) {
             return ProviderHelper.badrequest(request, LIMIT_ERROR_MESSAGE);
@@ -168,6 +172,8 @@ public class FeedAdapter extends TargetAwareAbstractCollectionAdapter {
             final AdapterResponse<Entry> response = feedPublisher.putEntry(new PutEntryRequestImpl(request));
 
             return entryResponseHandler.handleResponse(request, response);
+        } catch (ParseException ex) {
+            return ProviderHelper.createErrorResponse(Abdera.getInstance(), ERROR_CODE, ex.getMessage(), ex);
         } catch (Exception ex) {
             return ProviderHelper.servererror(request, ex.getMessage(), ex);
         }
