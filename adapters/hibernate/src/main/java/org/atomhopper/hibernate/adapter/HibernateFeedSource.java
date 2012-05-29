@@ -27,21 +27,15 @@ import org.atomhopper.hibernate.query.SimpleCategoryCriteriaGenerator;
 import org.atomhopper.response.AdapterResponse;
 import org.atomhopper.util.uri.template.EnumKeyedTemplateParameters;
 import org.atomhopper.util.uri.template.URITemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class HibernateFeedSource implements FeedSource {
-
+    private static final Logger LOG = LoggerFactory.getLogger(HibernateFeedSource.class);
     private static final int PAGE_SIZE = 25;
     private FeedRepository feedRepository;
     private static final String LAST_ENTRY = "last";
-
-    private static final String TITLE_PROP = "title";
-    private static final String AUTHOR_NAME_PROP = "title";
-    private static final String AUTHOR_URI_PROP = "title";
-    private static final String CATEGORY_PROP = "title";
-    private static final String GENERATOR_PROP = "title";
-    private static final String LOGO_PROP = "title";
-    private static final String ICON_PROP = "title";
 
     @Autowired
     Map<String, String> znoProps;
@@ -72,7 +66,14 @@ public class HibernateFeedSource implements FeedSource {
             hyrdatedFeed.setTitle(getFeedRequest.getFeedName().toString());
 
             // Zinio Beta
-            addZinioProperties(hyrdatedFeed);
+            LOG.info("add zinio properties");
+            hyrdatedFeed.setTitle("Zinio Featured Articles");
+            hyrdatedFeed.addAuthor("Zinio LLC", null, "http://www.zinio.com");
+            //hyrdatedFeed.addCategory(znoProps.get(CATEGORY_PROP));
+            hyrdatedFeed.setGenerator(null, "0.0.3", null);
+            hyrdatedFeed.setIcon("http://www.zinio.com/favicon.ico");
+            hyrdatedFeed.setLogo("http://imgs.zinio.com/newsstand/images/newsstand/layout/zinio-logo.png");
+            // Zinio Beta
 
             // Set the previous link
             hyrdatedFeed.addLink(
@@ -104,43 +105,6 @@ public class HibernateFeedSource implements FeedSource {
         }
 
         return hyrdatedFeed;
-    }
-
-    private void addZinioProperties(Feed hyrdatedFeed) {
-        if (znoProps == null) {
-            return;
-        }
-
-        if (znoProps.containsKey(TITLE_PROP)) {
-            hyrdatedFeed.setTitle(znoProps.get(TITLE_PROP));
-        }
-
-        if (znoProps.containsKey(AUTHOR_NAME_PROP)) {
-            String authorName = znoProps.get(AUTHOR_NAME_PROP);
-            String authorUri = null;
-
-            if (znoProps.containsKey(AUTHOR_URI_PROP)) {
-                authorUri = znoProps.get(AUTHOR_URI_PROP);
-            }
-
-            hyrdatedFeed.addAuthor(authorName, null, authorUri);
-        }
-
-        if (znoProps.containsKey(CATEGORY_PROP)) {
-            hyrdatedFeed.addCategory(znoProps.get(CATEGORY_PROP));
-        }
-
-        if (znoProps.containsKey(GENERATOR_PROP)) {
-            hyrdatedFeed.setGenerator(null, znoProps.get(GENERATOR_PROP), null);
-        }
-
-        if (znoProps.containsKey(ICON_PROP)) {
-            hyrdatedFeed.setIcon(znoProps.get(ICON_PROP));
-        }
-
-        if (znoProps.containsKey(LOGO_PROP)) {
-            hyrdatedFeed.setLogo(znoProps.get(LOGO_PROP));
-        }
     }
 
     private Entry hydrateEntry(PersistedEntry persistedEntry, Abdera abderaReference) {
