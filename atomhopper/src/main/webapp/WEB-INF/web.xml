@@ -12,13 +12,13 @@
             folder then use this setting:
             <param-value>/META-INF/application-context.xml</param-value>
         -->
-        <param-value>file:///etc/atomhopper/application-context.xml</param-value>
+        <param-value>file:///home/tomcat/atomhopper/conf/application-context.xml</param-value>
     </context-param>
 
     <!--This section configures log4j properties-->
     <context-param><!--Log4j properties file location, "file:///" required.-->
         <param-name>log4jConfigLocation</param-name>
-        <param-value>file:///etc/atomhopper/log4j.properties</param-value>
+        <param-value>file:///home/tomcat/atomhopper/conf/log4j.properties</param-value>
     </context-param>
     <context-param><!--This causes it to check once a second for changes to the log4j.properties file.-->
         <param-name>log4jRefreshInterval</param-name>
@@ -40,7 +40,7 @@
 
         <init-param>
             <param-name>config-location</param-name>
-            <param-value>file:///etc/atomhopper/atom-server.cfg.xml</param-value>
+            <param-value>file:///home/tomcat/atomhopper/conf/atom-server.cfg.xml</param-value>
         </init-param>
 
         <init-param>
